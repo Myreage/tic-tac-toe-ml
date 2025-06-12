@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="stylesheet" href="/src/style.css" />
+    <title>Tic Tac Toe</title>
+  </head>
+  <body>
+    <div id="board">
+      <div id="player-turn"></div>
+      <div id="games-counter"></div>
+      <div id="ai-score"></div>
+      <div id="ai-exploration-rate"></div>
+      <div id="auto-training-progress"></div>
+      <div class="board-row">
+        <button onclick="" class="square" data-index="0"></button>
+        <button class="square" data-index="1"></button>
+        <button class="square" data-index="2"></button>
+      </div>
+      <div class="board-row">
+        <button class="square" data-index="3"></button>
+        <button class="square" data-index="4"></button>
+        <button class="square" data-index="5"></button>
+      </div>
+      <div class="board-row">
+        <button class="square" data-index="6"></button>
+        <button class="square" data-index="7"></button>
+        <button class="square" data-index="8"></button>
+      </div>
+    </div>
+    <div id="controls">
+      <button id="win-button">Win</button>
+      <button id="lost-button">Lost</button>
+      <button id="draw-button">Draw</button>
+      <button id="illegal-button">Illegal</button>
+      <button id="next-button">Next</button>
+      <button id="reset-button">Reset Game</button>
+      <button id="auto-train-button">Auto train</button>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
