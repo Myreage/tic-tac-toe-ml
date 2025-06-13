@@ -1,9 +1,9 @@
-import type { Action, Agent, StateHash } from "./agent";
+import type { Action, StateHash } from "./agent";
 
 /**
  * Class that represents an AI agent that plays and learns to play tic-tac-toe using Q-learning.
  */
-export class QLearnAgent implements Agent {
+export class QLearnAgent {
   private qTable: Record<StateHash, Record<Action, number>>;
   private learningRate: number;
   private discountFactor: number;
@@ -51,33 +51,56 @@ export class QLearnAgent implements Agent {
 
   updateQValue({
     action,
-    currentState,
-    nextState,
+    state,
+    resultingState,
     reward,
   }: {
-    currentState: StateHash;
+    state: StateHash;
     action: Action;
+    resultingState: StateHash;
     reward: number;
-    nextState: StateHash | null;
   }) {
     // Update the Q-value for the current state and action using the Q-learning formula
-    const currentQValue = this.qTable[currentState][action];
-    const maxNextQValue = nextState
-      ? Math.max(...Object.values(this.qTable[nextState]))
+    const qValueToUpdate = this.qTable[state][action];
+
+    const maxResultingQValue = resultingState
+      ? Math.max(...Object.values(this.qTable[resultingState]))
       : 0;
     const newQValue =
-      currentQValue +
+      qValueToUpdate +
       this.learningRate *
-        (reward + this.discountFactor * maxNextQValue - currentQValue);
-    this.qTable[currentState][action] = newQValue;
-
-    console.log(
-      `Updated Q-value for state ${currentState}, action ${action}: ${newQValue}`
-    );
+        (reward + this.discountFactor * maxResultingQValue - qValueToUpdate);
+    this.qTable[state][action] = newQValue;
   }
 
   getQTable() {
     return this.qTable;
+  }
+
+  learn({
+    action,
+    finalState,
+    outcome,
+    startingState,
+  }: {
+    startingState: StateHash;
+    finalState: StateHash;
+    action: Action;
+    outcome: "no-effect" | "win" | "lose" | "illegal";
+  }) {
+    const rewards = {
+      "no-effect": 0,
+      win: 1,
+      lose: -1,
+      illegal: -10,
+    };
+
+    this.updateQValue({
+      action,
+      resultingState: finalState,
+      reward: rewards[outcome],
+      state: startingState,
+    });
   }
 
   decideAction(state: StateHash): Action {

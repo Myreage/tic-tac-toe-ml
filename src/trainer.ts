@@ -1,12 +1,17 @@
 import type { Agent, StateHash } from "./agent";
 import type { QLearnAgent } from "./qLearnAgent";
 
+const getRandomIntegerInclusive = (min: number, max: number) => {
+  const minCeiled = Math.ceil(min);
+  const maxFloored = Math.floor(max);
+
+  return Math.floor(Math.random() * (maxFloored - minCeiled + 1) + minCeiled);
+};
+
 export class Trainer {
   private teacherAgent: Agent;
   private studentAgent: QLearnAgent;
   private state: StateHash;
-  private lastStudentAction: number | null = null;
-  private lastStudentStartingBoard: string | null = null;
 
   constructor(teacherAgent: Agent, studentAgent: QLearnAgent) {
     this.teacherAgent = teacherAgent;
@@ -57,135 +62,38 @@ export class Trainer {
     return { winner: null, done: false }; // Game continues
   }
 
-  displayBoard() {
-    const board = this.state
-      .split("")
-      .map(Number)
-      .map((cell) => {
-        if (cell === 0) return ".";
-        if (cell === 1) return "X";
-        if (cell === 2) return "O";
-        return "?"; // Unknown state
-      });
-
-    for (let i = 0; i < 3; i++) {
-      console.log(board.slice(i * 3, i * 3 + 3).join(" "));
-    }
-    console.log("");
-  }
-
   train(episodes: number) {
-    console.log("Starting training with episodes:", episodes);
-    let studentWins = 0;
-    let studentLosses = 0;
-    let draws = 0;
-    let illegalMoves = 0;
-    let gameResults = [];
-
     for (let episode = 0; episode < episodes; episode++) {
-      console.log(`Episode ${episode + 1}/${episodes}`);
+      let currentPlayer = getRandomIntegerInclusive(1, 2);
       this.studentAgent.updateExplorationRate();
       this.resetBoard();
+
       while (true) {
-        const boardBeforeTeacherPlay = this.state;
+        const player =
+          currentPlayer === 1 ? this.teacherAgent : this.studentAgent;
 
-        const teacherAction = this.teacherAgent.decideAction(this.state);
-        this.applyAction(teacherAction, 1);
+        const action = player.decideAction(this.state);
 
-        const { done: doneAfterTeacher, winner: teacherWin } =
-          this.checkBoardState();
-
-        if (doneAfterTeacher) {
-          if (teacherWin) {
-            // Update student after loss
-
-            studentLosses++;
-            gameResults.push("loss");
-            if (
-              this.lastStudentAction !== null &&
-              this.lastStudentStartingBoard !== null
-            ) {
-              this.studentAgent.updateQValue({
-                action: this.lastStudentAction,
-                currentState: this.lastStudentStartingBoard,
-                nextState: boardBeforeTeacherPlay,
-                reward: -1, // Teacher wins, student loses
-              });
-            }
-            break;
-          }
-          // Update student after draw
-          if (
-            this.lastStudentAction !== null &&
-            this.lastStudentStartingBoard !== null
-          ) {
-            this.studentAgent.updateQValue({
-              action: this.lastStudentAction,
-              currentState: this.lastStudentStartingBoard,
-              nextState: boardBeforeTeacherPlay,
-              reward: 0, // Draw
-            });
-          }
-
-          draws++;
-          gameResults.push("draw");
-          break;
-        }
-
-        const boardBeforeStudentPlay = this.state;
-        const studentAction = this.studentAgent.decideAction(this.state);
-        const isIllegalMove = this.applyAction(studentAction, 2);
-        this.lastStudentAction = studentAction;
-        this.lastStudentStartingBoard = boardBeforeStudentPlay;
+        const isIllegalMove = this.applyAction(action, currentPlayer);
 
         if (isIllegalMove) {
-          this.studentAgent.updateQValue({
-            action: studentAction,
-            currentState: boardBeforeStudentPlay,
-            nextState: null,
-            reward: -10, // Illegal penalty
-          });
-
-          illegalMoves++;
-          gameResults.push("illegal");
-          break;
+          // learn
         }
 
-        const { done: doneAfterStudent, winner: studentWin } =
-          this.checkBoardState();
+        const boardState = this.checkBoardState();
 
-        if (doneAfterStudent) {
-          if (studentWin) {
-            this.studentAgent.updateQValue({
-              action: studentAction,
-              currentState: boardBeforeStudentPlay,
-              nextState: this.state,
-              reward: 1, // Student wins
-            });
-
-            gameResults.push("win");
-            studentWins++;
+        if (boardState.done) {
+          if (boardState.winner === 1) {
+            // student lost
+            break;
+          } else if (boardState.winner === 2) {
+            //student won
             break;
           }
-          this.studentAgent.updateQValue({
-            action: studentAction,
-            currentState: boardBeforeStudentPlay,
-            nextState: this.state,
-            reward: 0,
-          });
-
-          gameResults.push("draw");
-          draws++;
+          // draw
           break;
         }
       }
     }
-
-    return {
-      studentWins,
-      studentLosses,
-      draws,
-      illegalMoves,
-    };
   }
 }

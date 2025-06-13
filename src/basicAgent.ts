@@ -71,4 +71,8 @@ export class BasicAgent implements Agent {
 
     throw new Error("No available actions to perform.");
   }
+
+  draw() {}
+  lose() {}
+  win() {}
 }
