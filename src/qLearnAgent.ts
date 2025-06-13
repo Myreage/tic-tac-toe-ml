@@ -1,9 +1,9 @@
-import type { Action, StateHash } from "./agent";
+import type { Action, Agent, StateHash } from "./agent";
 
 /**
  * Class that represents an AI agent that plays and learns to play tic-tac-toe using Q-learning.
  */
-export class QLearnAgent {
+export class QLearnAgent implements Agent {
   private qTable: Record<StateHash, Record<Action, number>>;
   private learningRate: number;
   private discountFactor: number;
@@ -57,7 +57,7 @@ export class QLearnAgent {
   }: {
     state: StateHash;
     action: Action;
-    resultingState: StateHash;
+    resultingState: StateHash | null;
     reward: number;
   }) {
     // Update the Q-value for the current state and action using the Q-learning formula
@@ -66,6 +66,7 @@ export class QLearnAgent {
     const maxResultingQValue = resultingState
       ? Math.max(...Object.values(this.qTable[resultingState]))
       : 0;
+
     const newQValue =
       qValueToUpdate +
       this.learningRate *
@@ -84,15 +85,16 @@ export class QLearnAgent {
     startingState,
   }: {
     startingState: StateHash;
-    finalState: StateHash;
+    finalState: StateHash | null;
     action: Action;
-    outcome: "no-effect" | "win" | "lose" | "illegal";
+    outcome: "no-effect" | "win" | "lose" | "illegal" | "draw";
   }) {
     const rewards = {
-      "no-effect": 0,
+      "no-effect": 0.1,
       win: 1,
       lose: -1,
       illegal: -10,
+      draw: 0.5,
     };
 
     this.updateQValue({
@@ -118,6 +120,12 @@ export class QLearnAgent {
         .map(Number);
       return bestActions[Math.floor(Math.random() * bestActions.length)];
     }
+  }
+
+  setExploration(rate: number, decay: number, min: number) {
+    this.explorationRate = rate;
+    this.explorationDecay = decay;
+    this.explorationMin = min;
   }
 
   updateExplorationRate() {

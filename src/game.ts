@@ -1,21 +1,89 @@
-import type { Agent } from "./agent";
+import { Agent } from "./agent";
+import { QLearnAgent } from "./qLearnAgent";
+import rl from "readline";
 
-class Game {
+function askQuestion(query: string): Promise<string> {
+  const readline = rl.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) =>
+    readline.question(query, (ans) => {
+      readline.close();
+      resolve(ans);
+    })
+  );
+}
+
+// Handles a game loop. Player 1 is a human player, and Player 2 is a Q-learning agent.
+export class Game {
   private board: number[];
-  private player1: Agent;
-  private player2: Agent;
+  private agent: Agent;
 
-  resetBoard() {
-    this.board = new Array(9).fill(0);
+  constructor(agent: Agent) {
+    this.board = Array(9).fill(0); // Initialize the board to empty
+    this.agent = agent;
+  }
+  public async play() {
+    this.resetBoard();
+    let currentPlayer = Math.random() < 0.5 ? 1 : 2; // Randomly choose starting player
+    let moves = 0;
+
+    while (moves < 9) {
+      this.printBoard();
+      if (currentPlayer === 1) {
+        const action = await this.getHumanMove();
+        if (this.applyAction(action, currentPlayer) === 1) {
+          console.log("Illegal move, try again.");
+          continue;
+        }
+      } else {
+        const action = this.agent.decideAction(this.board.join(""));
+        console.log(`Player ${currentPlayer} (AI) chooses action: ${action}`);
+        this.applyAction(action, currentPlayer);
+      }
+
+      if (this.checkWin(currentPlayer)) {
+        this.printBoard();
+        console.log(`Player ${currentPlayer} wins!`);
+        return;
+      }
+
+      currentPlayer = currentPlayer === 1 ? 2 : 1; // Switch players
+      moves++;
+    }
+
+    this.printBoard();
+    console.log("It's a draw!");
+  }
+  private printBoard() {
+    console.log("Current board:");
+    for (let i = 0; i < 3; i++) {
+      const row = this.board
+        .slice(i * 3, i * 3 + 3)
+        .map((cell) => (cell === 0 ? "." : cell === 1 ? "X" : "O"))
+        .join(" ");
+      console.log(row);
+    }
+    console.log("\n");
   }
 
-  constructor({ player1, player2 }: { player1: Agent; player2: Agent }) {
-    this.player1 = player1;
-    this.player2 = player2;
-    this.board = new Array(9).fill(0);
+  private async getHumanMove(): Promise<number> {
+    const input = await askQuestion("Enter your move (0-8): ");
+
+    const action = parseInt(input, 10);
+    return action;
   }
 
-  checkWin(player: 1 | 2) {
+  private applyAction(action: number, player: number): number {
+    if (this.board[action] !== 0) {
+      return 1; // Illegal move, square already filled
+    }
+    this.board[action] = player;
+    return 0; // Move applied successfully
+  }
+  private checkWin(player: number): boolean {
     const winningCombinations = [
       [0, 1, 2], // Row 1
       [3, 4, 5], // Row 2
@@ -27,64 +95,16 @@ class Game {
       [2, 4, 6], // Diagonal /
     ];
 
-    winningCombinations.forEach((combination) => {
+    return winningCombinations.some((combination) => {
       const [a, b, c] = combination;
-      if (
+      return (
         this.board[a] === player &&
         this.board[b] === player &&
         this.board[c] === player
-      ) {
-        return true;
-      }
+      );
     });
-
-    return false;
   }
-
-  applyAction(action: number, player: 1 | 2) {
-    this.board[action] = player;
-    this.displayBoard();
-    console.log(`Player ${player} played in ${action}`);
-  }
-
-  displayBoard() {
-    console.log(`${this.board[0]} ${this.board[1]} ${this.board[2]}`);
-    console.log(`${this.board[3]} ${this.board[4]} ${this.board[5]}`);
-    console.log(`${this.board[6]} ${this.board[7]} ${this.board[8]}`);
-  }
-
-  play(startingPlayer: 1 | 2) {
-    this.resetBoard();
-    let currentPlayer = startingPlayer;
-    let moves = 0;
-
-    while (moves < 9) {
-      const player = currentPlayer === 1 ? this.player1 : this.player2;
-      const action = player.decideAction(this.board.join(","));
-
-      this.applyAction(action, currentPlayer);
-
-      if (this.board[action] !== 0) {
-        console.log(
-          `Invalid move by player ${currentPlayer} at cell ${action}`
-        );
-        return;
-      }
-
-      this.board[action] = currentPlayer;
-      moves++;
-
-      // Check for a win condition
-      if (this.checkWin(currentPlayer)) {
-        console.log(`Player ${currentPlayer} wins!`);
-        return;
-      }
-
-      // Switch players
-      currentPlayer = currentPlayer === 1 ? 2 : 1;
-    }
-
-    console.log("It's a draw!");
-    return;
+  public resetBoard() {
+    this.board = Array(9).fill(0); // Reset the board to empty state
   }
 }
