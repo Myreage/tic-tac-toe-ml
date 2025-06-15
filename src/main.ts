@@ -1,4 +1,5 @@
 import { BasicAgent } from "./basicAgent";
+import { PerfectAgent } from "./perfectAgent";
 import { Game } from "./game";
 import { NoobAgent } from "./noobAgent";
 import { QLearnAgent } from "./qLearnAgent";
@@ -30,14 +31,16 @@ basicTrainer.train(10000);
 
 console.log("Training completed");
 
-console.log("Starting exploitation training against basic trainer...");
 agent.setExploration(0, 0, 0);
+console.log("Starting exploitation training against basic agent...");
 basicTrainer.train(10000);
-
-console.log("Training completed");
+console.log("Exploitation training completed");
 
 console.log("Play a game against the agent");
-const game = new Game(agent);
+
+const perfectTeacher = new PerfectAgent(1);
+
+const game = new Game(perfectTeacher);
 while (true) {
   await game.play();
 }
